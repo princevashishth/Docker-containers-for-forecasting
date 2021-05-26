@@ -1,0 +1,71 @@
+#links define how a service a reachable by another service
+#image is file that will be pulled from docker hub
+#HERE volumes basically denotes that the file which docker container would be using(telegraf.conf), it would take it from the folder that we have #mentioned. This is super useful
+# depends_on to make sure the other container is built and run first.
+version: '3'
+
+services:
+  # Define a Telegraf service
+  telegraf:
+    image: telegraf
+    volumes:
+      - ./etc/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    links:
+      - influxdb
+    ports:
+      - "8092:8092/udp"
+      - "8094:8094"
+      - "8125:8125/udp"
+  # Define an InfluxDB service
+  influxdb:
+    image: influxdb:1.8
+    volumes:
+      - ./data/influxdb:/var/lib/influxdb
+    ports:
+      - "8086:8086"
+    expose:
+      - "8086"
+  # Define a Chronograf service
+  chronograf:
+    image: chronograf
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      KAPACITOR_URL: http://kapacitor:9092
+    ports:
+      - "8888:8888"
+    links:
+      - influxdb
+      - kapacitor
+  # Define a Kapacitor service
+  kapacitor:
+    image: kapacitor
+    environment:
+      KAPACITOR_HOSTNAME: kapacitor
+      KAPACITOR_INFLUXDB_0_URLS_0: http://influxdb:8086
+    links:
+      - influxdb
+    ports:
+      - "9092:9092"
+  
+#  multitimeseries_forecasting_single:
+#    container_name: multitimeseries_forecasting_single
+#    build: ./multitimeseries_forecasting_single
+#    ports:
+#      - "4000:4000"
+#    links:
+#      - influxdb
+#    depends_on:
+#      - influxdb
+#    restart: unless-stopped
+
+  multitimeseries_forecasting_ten:
+    container_name: multitimeseries_forecasting_ten
+    build: ./multitimeseries_forecasting_ten
+    ports:
+      - "4000:4000"
+    links:
+      - influxdb
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+  
